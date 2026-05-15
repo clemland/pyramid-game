@@ -1,9 +1,15 @@
 import { DiscordSDK } from '@discord/embedded-app-sdk';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+
+// ─── Import logo depuis les assets ────────────────────────────────────────────
+// Placer le fichier logo dans src/assets/pyramid-logo.png
+// Vite l'importera automatiquement comme URL
+import pyramidLogoSrc from './assets/pyramid-logo.png';
 
 // ─── Animations CSS ────────────────────────────────────────────────────────────
 const styleEl = document.createElement('style');
 styleEl.textContent = `
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&display=swap');
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
   @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
@@ -11,8 +17,13 @@ styleEl.textContent = `
   @keyframes rankReveal { from { opacity:0; transform:scale(0.85); } to { opacity:1; transform:scale(1); } }
   .phone-app-icon { transition: transform 0.12s ease, filter 0.12s ease; cursor: pointer; user-select: none; -webkit-user-select:none; }
   .phone-app-icon:active { transform: scale(0.88) !important; }
+  .tab-btn { transition: color 0.18s, border-bottom-color 0.18s; }
+  .tab-btn:active { opacity: 0.7; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: #030810; overflow: hidden; }
+  html, body { margin: 0; padding: 0; height: 100%; background: #030810; overflow: hidden; }
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1a2d40; border-radius: 2px; }
 `;
 document.head.appendChild(styleEl);
 
@@ -51,31 +62,63 @@ function PhoneShell({ children }) {
     return () => clearInterval(t);
   }, []);
 
+  // Sur mobile : full screen. Sur desktop : wrapper centré avec bordure téléphone.
+  const isMobile = window.innerWidth <= 430;
+
+  const shellStyle = isMobile ? {
+    width: '100vw',
+    height: '100dvh',
+    background: 'linear-gradient(160deg, #0d1a2a 0%, #060f18 100%)',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    position: 'relative',
+  } : {
+    width: 390,
+    height: 844,
+    background: 'linear-gradient(160deg, #0d1a2a 0%, #060f18 100%)',
+    display: 'flex',
+    flexDirection: 'column',
+    borderRadius: 44,
+    overflow: 'hidden',
+    boxShadow: '0 0 0 10px #111820, 0 0 0 12px #1a2d40, 0 30px 80px rgba(0,0,0,0.9)',
+    position: 'relative',
+  };
+
   return (
-    <div style={{
-      width: 390, height: '100vh', maxHeight: 844,
-      background: 'linear-gradient(160deg, #0d1a2a 0%, #060f18 100%)',
-      display: 'flex', flexDirection: 'column',
-      borderRadius: window.innerWidth > 430 ? 40 : 0,
-      overflow: 'hidden',
-      boxShadow: window.innerWidth > 430 ? '0 0 80px rgba(0,0,0,0.8), inset 0 0 0 1px #ffffff08' : 'none',
-      position: 'relative',
-    }}>
-      {/* Notch area / status bar */}
+    <div style={shellStyle}>
+      {/* Status bar */}
       <div style={{
-        height: 50, paddingTop: 12, paddingLeft: 20, paddingRight: 20,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        flexShrink: 0, position: 'relative', zIndex: 10,
+        height: isMobile ? 44 : 50,
+        paddingTop: isMobile ? 10 : 14,
+        paddingLeft: 22,
+        paddingRight: 22,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexShrink: 0,
+        position: 'relative',
+        zIndex: 10,
       }}>
-        <span style={{ fontFamily: 'Oswald, sans-serif', fontSize: 14, fontWeight: 600, color: '#e8f4ff', letterSpacing: 1 }}>
+        <span style={{ fontFamily: 'Oswald, sans-serif', fontSize: 15, fontWeight: 600, color: '#e8f4ff', letterSpacing: 0.5 }}>
           {time}
         </span>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingTop: 2 }}>
+        {/* Notch dynamique pour les designs desktop */}
+        {!isMobile && (
+          <div style={{
+            position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)',
+            width: 120, height: 30, background: '#0d1a2a',
+            borderRadius: '0 0 18px 18px',
+          }} />
+        )}
+        <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+          {/* Signal WiFi */}
           <svg width={15} height={11} viewBox="0 0 15 11" fill="none">
             <path d="M7.5 9a.8.8 0 1 1 0 1.6A.8.8 0 0 1 7.5 9z" fill="#e8f4ff" />
             <path d="M4.8 6.8a4 4 0 0 1 5.4 0" stroke="#e8f4ff" strokeWidth="1.3" strokeLinecap="round" />
             <path d="M2 4a8 8 0 0 1 11 0" stroke="#e8f4ff" strokeWidth="1.3" strokeLinecap="round" />
           </svg>
+          {/* Batterie */}
           <svg width={22} height={12} viewBox="0 0 22 12" fill="none">
             <rect x="0.5" y="0.5" width="17" height="11" rx="2.5" stroke="#e8f4ff" strokeWidth="1" />
             <rect x="18" y="3.5" width="3" height="5" rx="1.2" fill="#e8f4ff" />
@@ -84,14 +127,14 @@ function PhoneShell({ children }) {
         </div>
       </div>
 
-      {/* Content area */}
+      {/* Content */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {children}
       </div>
 
       {/* Home bar */}
-      <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <div style={{ width: 120, height: 5, borderRadius: 3, background: '#ffffff18' }} />
+      <div style={{ height: isMobile ? 28 : 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, paddingBottom: isMobile ? 4 : 0 }}>
+        <div style={{ width: 130, height: 5, borderRadius: 3, background: '#ffffff18' }} />
       </div>
     </div>
   );
@@ -105,47 +148,80 @@ function HomeScreen({ apps, onOpenApp }) {
 
   return (
     <div style={{
-      flex: 1, padding: '8px 24px 0',
-      background: 'radial-gradient(ellipse at 50% -10%, #1a2d4030 0%, transparent 60%)',
-      display: 'flex', flexDirection: 'column',
+      flex: 1,
+      padding: '16px 20px 0',
+      display: 'flex',
+      flexDirection: 'column',
     }}>
-      {/* Clock */}
-      <div style={{ textAlign: 'center', marginBottom: 36, marginTop: 10 }}>
-        <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 68, fontWeight: 700, color: '#e8f4ff', lineHeight: 1 }}>
+      {/* Horloge centrale */}
+      <div style={{ textAlign: 'center', marginBottom: 40, marginTop: 16 }}>
+        <div style={{
+          fontFamily: 'Oswald, sans-serif',
+          fontSize: 72,
+          fontWeight: 700,
+          color: '#e8f4ff',
+          lineHeight: 1,
+          letterSpacing: -2,
+          textShadow: '0 0 40px rgba(255,255,255,0.08)',
+        }}>
           {bigTime}
         </div>
-        <div style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 13, color: '#4a7090', marginTop: 4, textTransform: 'capitalize' }}>
+        <div style={{
+          fontFamily: 'Rajdhani, sans-serif',
+          fontSize: 13,
+          color: '#3a5570',
+          marginTop: 6,
+          textTransform: 'capitalize',
+          letterSpacing: 1,
+        }}>
           {dateStr}
         </div>
       </div>
 
-      {/* App grid */}
+      {/* Grille d'apps */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: 18, padding: '18px 12px',
-        background: 'rgba(255,255,255,0.03)',
-        borderRadius: 24, border: '1px solid rgba(255,255,255,0.06)',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 16,
+        padding: '20px 10px',
+        background: 'rgba(255,255,255,0.025)',
+        borderRadius: 28,
+        border: '1px solid rgba(255,255,255,0.05)',
       }}>
         {apps.map(app => (
-          <div key={app.id} className="phone-app-icon"
+          <div
+            key={app.id}
+            className="phone-app-icon"
             onClick={() => onOpenApp(app.id)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
+          >
             <div style={{
-              width: 58, height: 58, borderRadius: 14,
+              width: 60,
+              height: 60,
+              borderRadius: 15,
               background: app.gradient || '#1a2d40',
               border: `1px solid ${app.color || '#ffffff10'}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 6px 20px ${app.color || '#000'}25`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: `0 8px 24px ${app.color || '#000'}22`,
               overflow: 'hidden',
             }}>
               {app.logo
                 ? <img src={app.logo} alt={app.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={e => { e.target.style.display = 'none'; }} />
-                : <span style={{ fontSize: 26 }}>{app.icon}</span>
+                : <span style={{ fontSize: 28 }}>{app.icon}</span>
               }
             </div>
-            <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 11, color: '#8aa0b8', textAlign: 'center', lineHeight: 1.2 }}>
+            <span style={{
+              fontFamily: 'Rajdhani, sans-serif',
+              fontSize: 11,
+              color: '#6a8aa8',
+              textAlign: 'center',
+              lineHeight: 1.2,
+              letterSpacing: 0.5,
+            }}>
               {app.name}
             </span>
           </div>
@@ -155,36 +231,64 @@ function HomeScreen({ apps, onOpenApp }) {
   );
 }
 
-// ─── APP NAV HEADER ───────────────────────────────────────────────────────────
+// ─── APP HEADER ───────────────────────────────────────────────────────────────
 function AppHeader({ title, color, onBack, logo }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-      background: 'rgba(0,0,0,0.35)', borderBottom: `1px solid ${color}25`,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '10px 14px',
+      background: 'rgba(0,0,0,0.4)',
+      borderBottom: `1px solid ${color}20`,
       flexShrink: 0,
     }}>
       <button onClick={onBack} style={{
-        background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 8, width: 32, height: 32, cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.09)',
+        borderRadius: 9,
+        width: 34,
+        height: 34,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
       }}>
         <svg width={16} height={16} viewBox="0 0 16 16" fill="none">
           <polyline points="10,3 5,8 10,13" stroke="#8aa0b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-      {logo && (
-        <div style={{ width: 26, height: 26, borderRadius: 7, overflow: 'hidden', flexShrink: 0, border: `1px solid ${color}40` }}>
-          <img src={logo} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      {logo ? (
+        <div style={{
+          width: 28,
+          height: 28,
+          borderRadius: 8,
+          overflow: 'hidden',
+          flexShrink: 0,
+          border: `1px solid ${color}35`,
+        }}>
+          <img src={logo} alt={title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={e => e.target.style.display = 'none'} />
         </div>
-      )}
-      {!logo && (
-        <div style={{ width: 26, height: 26, borderRadius: 7, background: color + '20',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>
+      ) : (
+        <div style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: color + '18',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 15, flexShrink: 0,
+        }}>
           🏛️
         </div>
       )}
-      <span style={{ fontFamily: 'Oswald, sans-serif', fontSize: 15, letterSpacing: 3, color, fontWeight: 600 }}>
+      <span style={{
+        fontFamily: 'Oswald, sans-serif',
+        fontSize: 15,
+        letterSpacing: 3,
+        color,
+        fontWeight: 600,
+      }}>
         {title}
       </span>
     </div>
@@ -195,8 +299,11 @@ function AppHeader({ title, color, onBack, logo }) {
 function StatCard({ icon, label, value, color }) {
   return (
     <div style={{
-      padding: '12px 8px', background: '#0a1520', border: '1px solid #1a2d40',
-      borderRadius: 12, textAlign: 'center',
+      padding: '12px 8px',
+      background: '#0a1520',
+      border: '1px solid #1a2d40',
+      borderRadius: 13,
+      textAlign: 'center',
     }}>
       <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
       <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 9, color: '#3a5060', letterSpacing: 2, marginBottom: 3 }}>
@@ -211,11 +318,11 @@ function StatCard({ icon, label, value, color }) {
 
 // ─── PYRAMID APP ──────────────────────────────────────────────────────────────
 function PyramidApp({ discordId, onBack, appLogo }) {
-  const [profile, setProfile]     = useState(null);
+  const [profile, setProfile]       = useState(null);
   const [classmates, setClassmates] = useState([]);
-  const [gages, setGages]         = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [activeTab, setActiveTab] = useState('rang');
+  const [gages, setGages]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [activeTab, setActiveTab]   = useState('rang');
   const [voteActive, setVoteActive] = useState(false);
 
   useEffect(() => {
@@ -265,9 +372,9 @@ function PyramidApp({ discordId, onBack, appLogo }) {
   const rankColor = rank ? RANK_COLORS[rank] : '#4a7090';
 
   const TABS = [
-    { id: 'rang',   label: 'MON RANG',  emoji: '⭐' },
-    { id: 'classe', label: 'CLASSE',    emoji: '👥' },
-    { id: 'gage',   label: 'GAGE',      emoji: '🎲' },
+    { id: 'rang',      label: 'RANG',      emoji: '⭐' },
+    { id: 'classe',    label: 'CLASSE',    emoji: '👥' },
+    { id: 'gage',      label: 'GAGE',      emoji: '🎲' },
   ];
 
   if (loading) return (
@@ -285,23 +392,37 @@ function PyramidApp({ discordId, onBack, appLogo }) {
 
       {/* Tabs */}
       <div style={{
-        display: 'flex', background: 'rgba(0,0,0,0.25)', borderBottom: '1px solid #1a2d40', flexShrink: 0,
+        display: 'flex',
+        background: 'rgba(0,0,0,0.3)',
+        borderBottom: '1px solid #1a2d40',
+        flexShrink: 0,
       }}>
         {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-            flex: 1, padding: '9px 4px', background: 'none', border: 'none', cursor: 'pointer',
-            fontFamily: 'Oswald, sans-serif', fontSize: 9, letterSpacing: 1.5,
-            color: activeTab === tab.id ? '#ffd60a' : '#3a5060',
-            borderBottom: activeTab === tab.id ? '2px solid #ffd60a' : '2px solid transparent',
-            transition: 'all 0.18s',
-          }}>
-            {tab.emoji} {tab.label}
+          <button
+            key={tab.id}
+            className="tab-btn"
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              flex: 1,
+              padding: '10px 4px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'Oswald, sans-serif',
+              fontSize: 8,
+              letterSpacing: 1.5,
+              color: activeTab === tab.id ? '#ffd60a' : '#2a4050',
+              borderBottom: activeTab === tab.id ? '2px solid #ffd60a' : '2px solid transparent',
+            }}
+          >
+            <div style={{ fontSize: 14, marginBottom: 2 }}>{tab.emoji}</div>
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 20px' }}>
+      {/* Contenu scrollable */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 24px' }}>
 
         {/* ─── MON RANG ─── */}
         {activeTab === 'rang' && (
@@ -320,7 +441,8 @@ function PyramidApp({ discordId, onBack, appLogo }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* Big rank card */}
                 <div style={{
-                  textAlign: 'center', padding: '28px 16px',
+                  textAlign: 'center',
+                  padding: '28px 16px',
                   background: RANK_BG[rank],
                   border: `2px solid ${rankColor}35`,
                   borderRadius: 18,
@@ -328,8 +450,11 @@ function PyramidApp({ discordId, onBack, appLogo }) {
                 }}>
                   <div style={{ fontSize: 42, marginBottom: 6 }}>{RANK_ICONS[rank]}</div>
                   <div style={{
-                    fontFamily: 'Oswald, sans-serif', fontSize: 76, fontWeight: 700,
-                    color: rankColor, lineHeight: 1,
+                    fontFamily: 'Oswald, sans-serif',
+                    fontSize: 76,
+                    fontWeight: 700,
+                    color: rankColor,
+                    lineHeight: 1,
                     textShadow: `0 0 40px ${rankColor}55`,
                     letterSpacing: -2,
                   }}>
@@ -343,7 +468,7 @@ function PyramidApp({ discordId, onBack, appLogo }) {
                   </div>
                 </div>
 
-                {/* Stats row */}
+                {/* Stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <StatCard icon="🗳️" label="Votes reçus" value={profile.pyramid_votes_received || 0} color={rankColor} />
                   <StatCard icon="⚡" label="Points totaux" value={(profile.pyramid_points || 0).toLocaleString()} color={rankColor} />
@@ -353,8 +478,10 @@ function PyramidApp({ discordId, onBack, appLogo }) {
                 {profile.class_name && (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px 14px', background: '#0a1520',
-                    border: '1px solid #1a2d40', borderRadius: 12,
+                    padding: '12px 14px',
+                    background: '#0a1520',
+                    border: '1px solid #1a2d40',
+                    borderRadius: 12,
                   }}>
                     <span style={{ fontSize: 20 }}>📚</span>
                     <div>
@@ -371,16 +498,21 @@ function PyramidApp({ discordId, onBack, appLogo }) {
                 {/* Vote active banner */}
                 {voteActive && (
                   <div style={{
-                    padding: '10px 14px', background: '#2dc65312',
-                    border: '1px solid #2dc65340', borderRadius: 10,
-                    fontFamily: 'Oswald, sans-serif', fontSize: 10, color: '#2dc653',
-                    letterSpacing: 1.5, textAlign: 'center',
+                    padding: '10px 14px',
+                    background: '#2dc65312',
+                    border: '1px solid #2dc65340',
+                    borderRadius: 10,
+                    fontFamily: 'Oswald, sans-serif',
+                    fontSize: 10,
+                    color: '#2dc653',
+                    letterSpacing: 1.5,
+                    textAlign: 'center',
                   }}>
                     ✅ VOTE EN COURS — /pyramid voter
                   </div>
                 )}
 
-                {/* Répartition */}
+                {/* Répartition des rangs */}
                 <div style={{ background: '#0a1520', border: '1px solid #1a2d40', borderRadius: 12, padding: '12px 14px' }}>
                   <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 10, color: '#3a5060', letterSpacing: 2, marginBottom: 10 }}>
                     RÉPARTITION DES RANGS
@@ -393,14 +525,16 @@ function PyramidApp({ discordId, onBack, appLogo }) {
                   ].map(({ r, pct, pts }) => (
                     <div key={r} style={{
                       display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '6px 0', borderBottom: '1px solid #0d1824',
+                      padding: '6px 0',
+                      borderBottom: '1px solid #0d1824',
                     }}>
                       <div style={{
                         width: 26, height: 26, borderRadius: 7,
-                        background: RANK_BG[r], border: `1px solid ${RANK_COLORS[r]}40`,
+                        background: RANK_BG[r],
+                        border: `1px solid ${RANK_COLORS[r]}40`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'Oswald, sans-serif', fontSize: 13, fontWeight: 700, color: RANK_COLORS[r],
-                        flexShrink: 0,
+                        fontFamily: 'Oswald, sans-serif', fontSize: 13, fontWeight: 700,
+                        color: RANK_COLORS[r], flexShrink: 0,
                       }}>
                         {r}
                       </div>
@@ -455,19 +589,25 @@ function PyramidApp({ discordId, onBack, appLogo }) {
                           {mr ? (
                             <div style={{
                               width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                              background: RANK_BG[mr], border: `1px solid ${mc}40`,
+                              background: RANK_BG[mr],
+                              border: `1px solid ${mc}40`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontFamily: 'Oswald, sans-serif', fontSize: 14, fontWeight: 700, color: mc,
                             }}>
                               {mr}
                             </div>
                           ) : (
-                            <div style={{ width: 30, height: 30, borderRadius: 8, background: '#0d1824', flexShrink: 0,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>?</div>
+                            <div style={{
+                              width: 30, height: 30, borderRadius: 8, background: '#0d1824', flexShrink: 0,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                            }}>?</div>
                           )}
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 14, color: isMe ? mc : '#e8f4ff', fontWeight: 600,
-                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{
+                              fontFamily: 'Rajdhani, sans-serif', fontSize: 14,
+                              color: isMe ? mc : '#e8f4ff', fontWeight: 600,
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>
                               {mate.username}{isMe ? ' ★' : ''}
                             </div>
                             <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 9, color: '#3a5060', letterSpacing: 1 }}>
@@ -519,8 +659,10 @@ function PyramidApp({ discordId, onBack, appLogo }) {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                       <span style={{ fontSize: 14 }}>{RANK_ICONS[g.rank] || '🎲'}</span>
-                      <span style={{ fontFamily: 'Oswald, sans-serif', fontSize: 9,
-                        color: RANK_COLORS[g.rank] || '#4a7090', letterSpacing: 2 }}>
+                      <span style={{
+                        fontFamily: 'Oswald, sans-serif', fontSize: 9,
+                        color: RANK_COLORS[g.rank] || '#4a7090', letterSpacing: 2,
+                      }}>
                         RANG {g.rank}
                       </span>
                     </div>
@@ -533,54 +675,7 @@ function PyramidApp({ discordId, onBack, appLogo }) {
             )}
           </div>
         )}
-      </div>
-    </div>
-  );
-}
 
-// ─── LOGO MODAL ───────────────────────────────────────────────────────────────
-function LogoModal({ onSave, onClose }) {
-  const [url, setUrl] = useState('');
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.75)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }} onClick={onClose}>
-      <div style={{
-        background: '#0d1824', border: '1px solid #1a2d40', borderRadius: 16,
-        padding: 20, width: '100%', maxWidth: 280,
-      }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 12, color: '#8aa0b8', letterSpacing: 2, marginBottom: 14 }}>
-          LOGO DE L'APP PYRAMID
-        </div>
-        <input value={url} onChange={e => setUrl(e.target.value)}
-          placeholder="https://..."
-          style={{
-            width: '100%', background: '#060f18', border: '1px solid #1a2d40',
-            borderRadius: 8, padding: '9px 12px', color: '#e8f4ff',
-            fontFamily: 'Rajdhani, sans-serif', fontSize: 13, outline: 'none',
-          }} />
-        {url.startsWith('http') && (
-          <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
-            <div style={{ width: 52, height: 52, borderRadius: 12, overflow: 'hidden', border: '1px solid #1a2d40', flexShrink: 0 }}>
-              <img src={url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={e => e.target.style.display = 'none'} />
-            </div>
-            <span style={{ fontFamily: 'Rajdhani, sans-serif', fontSize: 11, color: '#4a7090' }}>Aperçu du logo</span>
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          <button onClick={onClose} style={{
-            flex: 1, background: 'none', border: '1px solid #1a2d40', borderRadius: 8,
-            padding: 9, cursor: 'pointer', color: '#3a5060',
-            fontFamily: 'Oswald, sans-serif', fontSize: 10, letterSpacing: 1,
-          }}>ANNULER</button>
-          <button onClick={() => { onSave(url); onClose(); }} style={{
-            flex: 1, background: '#ffd60a15', border: '1px solid #ffd60a60', borderRadius: 8,
-            padding: 9, cursor: 'pointer', color: '#ffd60a',
-            fontFamily: 'Oswald, sans-serif', fontSize: 10, letterSpacing: 1,
-          }}>CONFIRMER</button>
-        </div>
       </div>
     </div>
   );
@@ -592,10 +687,6 @@ export default function App() {
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
   const [currentApp, setCurrentApp] = useState(null);
-  const [showLogoModal, setShowLogoModal] = useState(false);
-  const [pyramidLogo, setPyramidLogo] = useState(() => {
-    try { return sessionStorage.getItem('pyramid_logo') || null; } catch { return null; }
-  });
 
   useEffect(() => {
     async function setup() {
@@ -610,10 +701,13 @@ export default function App() {
         await sdk.ready();
         const { code } = await sdk.commands.authorize({
           client_id: import.meta.env.VITE_CLIENT_ID,
-          response_type: 'code', prompt: 'none', scope: ['identify'],
+          response_type: 'code',
+          prompt: 'none',
+          scope: ['identify'],
         });
         const tokenRes = await fetch('/api/token', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code }),
         });
         if (!tokenRes.ok) throw new Error('Échec du token.');
@@ -634,10 +728,8 @@ export default function App() {
     setup();
   }, []);
 
-  const handleSaveLogo = useCallback((url) => {
-    setPyramidLogo(url);
-    try { sessionStorage.setItem('pyramid_logo', url); } catch {}
-  }, []);
+  // Logo chargé depuis les assets statiques (src/assets/pyramid-logo.png)
+  const pyramidLogo = pyramidLogoSrc;
 
   const apps = [
     {
@@ -651,16 +743,33 @@ export default function App() {
   ];
 
   if (loading) return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#030810', flexDirection: 'column', gap: 14 }}>
+    <div style={{
+      height: '100dvh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#030810',
+      flexDirection: 'column',
+      gap: 14,
+    }}>
       <svg width={52} height={52} viewBox="0 0 52 52" style={{ animation: 'spin 2s linear infinite' }}>
         <polygon points="26,3 49,15 49,37 26,49 3,37 3,15" fill="none" stroke="#ffd60a" strokeWidth="1.5" />
       </svg>
-      <p style={{ color: '#4a7090', fontFamily: 'Oswald, sans-serif', letterSpacing: 4, fontSize: 11, margin: 0 }}>CHARGEMENT...</p>
+      <p style={{ color: '#4a7090', fontFamily: 'Oswald, sans-serif', letterSpacing: 4, fontSize: 11, margin: 0 }}>
+        CHARGEMENT...
+      </p>
     </div>
   );
 
   if (error) return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#030810', padding: 20 }}>
+    <div style={{
+      height: '100dvh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#030810',
+      padding: 20,
+    }}>
       <p style={{ color: '#f72585', fontFamily: 'Oswald, sans-serif', letterSpacing: 2, textAlign: 'center' }}>
         ERREUR — {error}
       </p>
@@ -668,31 +777,19 @@ export default function App() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#030810' }}>
+    <div style={{
+      minHeight: '100dvh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      background: '#030810',
+    }}>
       <PhoneShell>
-        {/* Logo button — only on home */}
-        {!currentApp && (
-          <div style={{ position: 'absolute', top: 52, right: 14, zIndex: 20 }}>
-            <button onClick={() => setShowLogoModal(true)} style={{
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, padding: '4px 10px', cursor: 'pointer',
-              color: '#4a7090', fontFamily: 'Oswald, sans-serif', fontSize: 9, letterSpacing: 1,
-            }}>
-              ✏️ LOGO
-            </button>
-          </div>
-        )}
-
         {!currentApp && <HomeScreen apps={apps} onOpenApp={setCurrentApp} />}
-
         {currentApp === 'pyramid' && (
           <PyramidApp discordId={discordId} onBack={() => setCurrentApp(null)} appLogo={pyramidLogo} />
         )}
       </PhoneShell>
-
-      {showLogoModal && (
-        <LogoModal onSave={handleSaveLogo} onClose={() => setShowLogoModal(false)} />
-      )}
     </div>
   );
 }
